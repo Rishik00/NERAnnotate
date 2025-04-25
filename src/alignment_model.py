@@ -9,7 +9,6 @@ from sentence_transformers import SentenceTransformer
 ## Loacl imports
 from .utils import setup_logging
 
-
 @dataclass
 class AlignerConfig:
     model: str = 'bert-base-multilingual-cased'
@@ -50,8 +49,9 @@ class BaseAlignmentModel:
     
     def _tokenize(self, source, target):
         if isinstance(source, str) and isinstance(target, str):
+            sub2word_map_src, sub2word_map_tgt = [], []
             source = self._preprocess_source(source)
-            target = self._preprocess_source(target)
+            target = self._preprocess_target(target)
 
             tokens_src = [self.tokenizer.tokenize(word) for word in source]
             tokens_tgt = [self.tokenizer.tokenize(word) for word in target]
@@ -67,8 +67,12 @@ class BaseAlignmentModel:
                 list(itertools.chain(*word_ids_tgt)), return_tensors='pt', truncation=True, max_length=self.tokenizer.model_max_length
             )['input_ids']
 
-            sub2word_map_src = [i for i, word_list in enumerate(tokens_src) for _ in word_list]
-            sub2word_map_tgt = [i for i, word_list in enumerate(tokens_tgt) for _ in word_list]
+            for i, word_list in enumerate(tokens_src):
+                sub2word_map_src += [i for x in word_list]
+
+            for i, word_list in enumerate(tokens_tgt):
+                sub2word_map_tgt += [i for x in word_list]
+
         else:
             raise TypeError("Check the types please")
         
@@ -79,8 +83,8 @@ class BaseAlignmentModel:
         tokens_src, tokens_tgt, word_ids_src, word_ids_tgt, ids_src, ids_tgt, sub2word_map_src, sub2word_map_tgt = self._tokenize(source, target)
         
         with torch.no_grad():
-            output_source = self.model(ids_src.to(self.config.device), output_hidden_states=True)[2][self.config.align_layer][0, 1:-1]
-            output_target = self.model(ids_tgt.to(self.config.device), output_hidden_states=True)[2][self.config.align_layer][0, 1:-1]
+            output_source = self.model(ids_src.to(self.config.device).unsqueeze(0), output_hidden_states=True)[2][self.config.align_layer][0, 1:-1]
+            output_target = self.model(ids_tgt.to(self.config.device).unsqueeze(0), output_hidden_states=True)[2][self.config.align_layer][0, 1:-1]
 
             dot = torch.matmul(output_source, output_target.transpose(-1, -2))
 
@@ -92,9 +96,12 @@ class BaseAlignmentModel:
         align_subwords = torch.nonzero(softmax_inter, as_tuple=False)
 
         self.align_words = {
-            (sub2word_map_src[i.item()], sub2word_map_tgt[j.item()])
+            (sub2word_map_src[i], sub2word_map_tgt[j])
             for i, j in align_subwords
         }
+
+        for i, j in self.align_words:
+            print(source.split(" ")[i], target.split(" ")[j])
 
         return self.align_words
 
