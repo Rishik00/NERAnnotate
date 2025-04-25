@@ -1,15 +1,12 @@
 #!/bin/bash
 echo "Cloning Awesome-Align repository..."
-git clone https://github.com/neulab/awesome-align.git
+git clone https://github.com/Rishik00/bert-align.git
 cd awesome-align
 
 echo "Installing Awesome-Align requirements..."
 pip install -r requirements.txt
 python setup.py install
 cd ..
-
-echo "Cloning IndicTrans2 repository..."
-git clone https://github.com/AI4Bharat/IndicTrans2.git
 
 echo "Installing core dependencies for IndicTrans..."
 python3 -m pip install nltk sacremoses pandas regex mock "transformers>=4.33.2" mosestokenizer
@@ -46,4 +43,4 @@ CUDA_VISIBLE_DEVICES=0 awesome-align \
     --extraction "$EXTRACTION" \
     --batch_size "$BATCH_SIZE"
 
-echo "🎉 Alignment completed! Output written to $OUTPUT_FILE"
+echo "Alignment completed! Output written to $OUTPUT_FILE"
