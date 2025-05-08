@@ -27,16 +27,14 @@ def main(
         source_lang=translator_config_yaml.get('source_lang', 'en'),
         target_lang=translator_config_yaml.get('target_lang', 'hi'),
         q_config=translator_config_yaml.get('q_config', 'None'),
-        device=translator_config_yaml.get('device', 'cpu')
     )
 
     aligner_config = AlignerConfig(
         model=alignment_config_yaml.get('model', 'bert-base-multilingual-cased'),
         output_file=alignment_config_yaml.get('output_file','content/dummty.txt'),
-        align_layer=alignment_config_yaml.get('align_layer', 8),
-        threshold=alignment_config_yaml.get('threshold', 0.3),
+        align_layer=int(alignment_config_yaml.get('align_layer', 8)),
+        threshold=float(alignment_config_yaml.get('threshold', 0.3)),
         probs_layer=alignment_config_yaml.get('probs_layer', 'softmax'),
-        device=alignment_config_yaml.get('device', 'cpu')
     )
 
     translator = BaseTranslatorModel(config=translator_config)
