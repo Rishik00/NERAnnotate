@@ -2,31 +2,31 @@ from dataclasses import dataclass
 import transformers
 import torch
 import itertools
-import typer
-from rich.progress import Progress, SpinnerColumn, TextColumn
-from sentence_transformers import SentenceTransformer
 
-## Loacl imports
-from .utils import setup_logging
+from utils import get_device
+
+device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 @dataclass
 class AlignerConfig:
     model: str = 'bert-base-multilingual-cased'
     output_file: str = 'file.txt'
     align_layer: int = 8
-    source_lang: str = 'en'
-    target_lang: str = 'hi'
-    threshold = 1e-3
-    is_st: bool = False
+    threshold: float = 1e-3
     probs_layer: str = 'softmax'
     debug_mode: bool = True
-    device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+device = get_device()
 
 class BaseAlignmentModel:
     def __init__(self, config: AlignerConfig):
         self.config = config
-        self.model = transformers.BertModel.from_pretrained(self.config.model).to(self.config.device)
-        self.tokenizer = transformers.BertTokenizer.from_pretrained(self.config.model)
+        self.model = transformers.BertModel.from_pretrained(
+            self.config.model
+        ).to(device)
+        self.tokenizer = transformers.BertTokenizer.from_pretrained(
+            self.config.model
+        )
 
         ## Set it to eval mode for inference
         self.model.eval()
@@ -83,8 +83,8 @@ class BaseAlignmentModel:
         tokens_src, tokens_tgt, word_ids_src, word_ids_tgt, ids_src, ids_tgt, sub2word_map_src, sub2word_map_tgt = self._tokenize(source, target)
         
         with torch.no_grad():
-            output_source = self.model(ids_src.to(self.config.device).unsqueeze(0), output_hidden_states=True)[2][self.config.align_layer][0, 1:-1]
-            output_target = self.model(ids_tgt.to(self.config.device).unsqueeze(0), output_hidden_states=True)[2][self.config.align_layer][0, 1:-1]
+            output_source = self.model(ids_src.to(device).unsqueeze(0), output_hidden_states=True)[2][self.config.align_layer][0, 1:-1]
+            output_target = self.model(ids_tgt.to(device).unsqueeze(0), output_hidden_states=True)[2][self.config.align_layer][0, 1:-1]
 
             dot = torch.matmul(output_source, output_target.transpose(-1, -2))
 
@@ -111,55 +111,5 @@ class BaseAlignmentModel:
 
         with open(self.config.output_file, 'w') as file_writer:
             for left_word, right_word in self.align_words:
-                file_writer.writeline(f'[SRC]{left_word} === [TGT]{right_word}')
+                file_writer.write(f'[SRC]{left_word} === [TGT]{right_word}')
         
-
-    def get_batch_alignments(self, src_batch, tgt_batch):
-        if isinstance(src_batch, list) and isinstance(tgt_batch, list): 
-            for src, tgt in zip(src_batch, tgt_batch):
-                self.get_alignments(src, tgt)
-        else:
-            return 
-
-## This is just for script testing, the main class will be used in either project_span/project_token.py
-def main(
-    model: str = 'bert-base-multilingual-cased',
-    output_file: str = 'file.txt',
-    align_layer: int = 8,
-    source_lang: str = 'en',
-    target_lang: str = 'hi',
-    threshold: float = 1e-3,
-    is_st: bool = False,
-    probs_layer: str = 'softmax',
-    device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
-) -> None:
-    
-    source_sentence = 'The university was established in 1997.'
-    target_sentence = 'विश्वविद्यालय की स्थापना 1997 में हुई थी।'
-
-    print("Loading config")
-    aligner_config = AlignerConfig(
-        model=model,
-        output_file=output_file,
-        align_layer=align_layer,
-        source_lang=source_lang,
-        target_lang=target_lang,
-        threshold=threshold,
-        is_st=is_st,
-        probs_layer=probs_layer,
-        device=device
-    )
-
-    print("Loading logger config")
-    setup_logging('aligner_model.log')
-
-    print("Loading alignment model: ")
-    aligner = BaseAlignmentModel(config=aligner_config)
-
-    print("Doing something:")
-    aligned_words = aligner.get_alignments(source_sentence, target_sentence)
-
-    print(aligned_words)
-
-if __name__ == "__main__":
-    typer.run(main)

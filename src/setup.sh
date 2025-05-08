@@ -1,46 +1,40 @@
 #!/bin/bash
-echo "Cloning Awesome-Align repository..."
-git clone https://github.com/Rishik00/bert-align.git
-cd awesome-align
+set -e  # Exit immediately on error
+set -o pipefail
+set -u  # Treat unset variables as errors
 
-echo "Installing Awesome-Align requirements..."
-pip install -r requirements.txt
-python setup.py install
-cd ..
+echo "[1/5] Installing core dependencies for IndicTrans..."
+python3 -m pip install --upgrade pip
+python3 -m pip install \
+    nltk \
+    sacremoses \
+    pandas \
+    regex \
+    mock \
+    "transformers>=4.33.2" \
+    mosestokenizer
 
-echo "Installing core dependencies for IndicTrans..."
-python3 -m pip install nltk sacremoses pandas regex mock "transformers>=4.33.2" mosestokenizer
+echo "[2/5] Downloading NLTK data..."
 python3 -c "import nltk; nltk.download('punkt')"
 
-echo "Installing additional libraries for IndicTrans..."
-python3 -m pip install bitsandbytes scipy accelerate datasets
-python3 -m pip install sentencepiece
+echo "[3/5] Installing additional libraries..."
+python3 -m pip install \
+    bitsandbytes \
+    scipy \
+    accelerate \
+    datasets \
+    sentencepiece
 
-echo "Cloning IndicTransToolkit repository..."
-git clone https://github.com/VarunGumma/IndicTransToolkit.git
+echo "[4/5] Cloning IndicTransToolkit repository..."
+if [ ! -d "IndicTransToolkit" ]; then
+    git clone https://github.com/VarunGumma/IndicTransToolkit.git
+else
+    echo "IndicTransToolkit directory already exists. Skipping clone."
+fi
+
+echo "[5/5] Installing IndicTransToolkit in editable mode..."
 cd IndicTransToolkit
-
-echo "Installing IndicTransToolkit in editable mode..."
-python3 -m pip install --editable ./
+python3 -m pip install --editable .
 cd ..
 
-echo "Setup complete!"
-echo "Running Awesome-Align with configuration..."
-
-# === CONFIGURATION ===
-DATA_FILE="/test/input.txt"
-MODEL_NAME_OR_PATH="bert-base-multilingual-cased"
-OUTPUT_FILE="/test/output.txt"
-BATCH_SIZE=32
-EXTRACTION="softmax"
-
-# === RUN AWESOME-ALIGN ===
-CUDA_VISIBLE_DEVICES=0 awesome-align \
-    --output_file "$OUTPUT_FILE" \
-    --model_name_or_path "$MODEL_NAME_OR_PATH" \
-    --tokenizer_name "$MODEL_NAME_OR_PATH" \
-    --data_file "$DATA_FILE" \
-    --extraction "$EXTRACTION" \
-    --batch_size "$BATCH_SIZE"
-
-echo "Alignment completed! Output written to $OUTPUT_FILE"
+echo "✅ Setup complete!"
