@@ -2,27 +2,18 @@ aligner_config:
   model: 'bert-base-multilingual-cased'
   output_file: 'file.txt'
   align_layer: 8
-  ## Only have to change these
-  source_lang: 'en'
-  target_lang: 'hi'
 
   threshold: 1e-3
-  is_st: False
   probs_layer: 'softmax'
 
 translator_config:
   batch_size: 4
   model_checkpoint_dir: 'ai4bharat/indictrans2-en-indic-1B'
   
-  ## Only have to change these
-  source_lang: 'en'
-  target_lang: 'hi'
-  
   file_path: "/content/input.txt"
   q_config: '4-bit'
 
 overall_config:
   input_type: 'hf_dataset' # Other options are 'single_language_file' and 'textual_input'
-  file_path: '/content/input.txt'
-  src_lang: 'en'
-  tgt_lang: 'hi'
+  source_lang: 'en'
+  target_lang: 'hi'
