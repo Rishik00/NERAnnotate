@@ -3,6 +3,8 @@ from typing import Dict, List
 import yaml
 import torch
 import logging
+import gc
+import torch
 
 def get_device():
     return 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -63,3 +65,17 @@ def setup_logging(log_file: str, log_level: int = logging.INFO):
     logger.addHandler(file_handler)
 
     return logger
+
+def clear_memory():
+    # Clear CPU memory
+    gc.collect()
+    print("CPU memory cleared (maybe or may not be!")
+
+    # Clear GPU memory (if available)
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+        print("GPU memory cleared!")
+
+def push_to_huggingface():
+    pass
